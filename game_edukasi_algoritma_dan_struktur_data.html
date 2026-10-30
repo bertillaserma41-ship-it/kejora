@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AlgoMaster - Ball Sort Stack (LIFO)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              dark: '#0B0F19',
+              card: '#151D2A',
+              accent: '#6366F1',
+              neonCyan: '#06B6D4',
+              neonPink: '#EC4899',
+              neonGreen: '#10B981',
+              warning: '#F59E0B'
+            }
+          },
+          animation: {
+            'bounce-slow': 'bounce 2s infinite',
+            'pulse-fast': 'pulse 1s infinite',
+            'float': 'float 3s ease-in-out infinite'
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-8px)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar & Touch Utilities */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0B0F19; }
+    ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #6366F1; }
+    
+    body {
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    .glass-card {
+      background: rgba(21, 29, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Stack Tube Styling */
+    .tube-container {
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .tube-container:hover {
+      transform: translateY(-4px);
+    }
+    .tube-selected {
+      border-color: #06B6D4 !important;
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+    }
+
+    /* Ball Animations */
+    .ball {
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .ball-selected {
+      transform: translateY(-35px) scale(1.1);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    }
+
+    /* Print settings for Certificate */
+    @media print {
+      body * { visibility: hidden; }
+      #certificate-modal, #certificate-modal * { visibility: visible; }
+      #certificate-modal { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-brand-dark text-slate-100 font-sans min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-brand-accent selection:text-white">
+
+  <!-- TOP HEADER / NAVBAR -->
+  <header class="w-full bg-slate-900/90 border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-lg backdrop-blur">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 via-pink-500 to-cyan-400 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/30">
+          <i class="fa-solid fa-layer-group"></i>
+        </div>
+        <div>
+          <h1 class="font-black text-lg leading-tight bg-gradient-to-r from-indigo-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">AlgoStack - Ball Sort</h1>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Pembelajaran Interaktif Struktur Data Stack (LIFO)</p>
+        </div>
+      </div>
+
+      <!-- Player Info & Controls -->
+      <div id="nav-user-info" class="hidden flex items-center gap-3">
+        <div class="bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-3">
+          <div class="text-right">
+            <div id="display-player-name" class="font-bold text-xs sm:text-sm text-cyan-400">Siswa</div>
+            <div id="display-player-class" class="text-[10px] text-slate-400">Kelas --</div>
+          </div>
+          <div class="h-6 w-px bg-slate-700"></div>
+          <div class="text-center">
+            <div class="text-[9px] text-slate-400 uppercase font-semibold">Skor Total</div>
+            <div id="display-total-score" class="font-extrabold text-amber-400 text-sm sm:text-base">0</div>
+          </div>
+        </div>
+
+        <!-- Audio Mute Button -->
+        <button id="btn-sound-toggle" onclick="toggleAudio()" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-300 transition active:scale-95" title="Mute/Unmute Suara">
+          <i id="sound-icon" class="fa-solid fa-volume-high text-indigo-400"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="flex-grow flex items-center justify-center p-3 sm:p-6 relative">
+    
+    <!-- Decorative background elements -->
+    <div class="absolute top-1/4 left-10 w-72 h-72 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-10 right-10 w-96 h-96 bg-pink-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <!-- PAGE 1: LOGIN SCREEN -->
+    <section id="page-login" class="w-full max-w-md glass-card rounded-3xl p-6 sm:p-8 shadow-2xl relative z-10 my-auto">
+      <div class="text-center mb-6">
+        <div class="inline-flex p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 mb-3 text-indigo-400 text-4xl animate-float">
+          <i class="fa-solid fa-shapes"></i>
+        </div>
+        <h2 class="text-2xl font-black text-white">Selamat Datang!</h2>
+        <p class="text-xs sm:text-sm text-slate-400 mt-1">Masukan nama & kelas untuk memulai tantangan Tumpukan Bola Stack (LIFO)</p>
+      </div>
+
+      <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5" for="input-name">
+            <i class="fa-solid fa-user mr-1 text-indigo-400"></i> Nama Lengkap
+          </label>
+          <input type="text" id="input-name" required placeholder="Masukkan Nama Lengkap" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5" for="input-class">
+            <i class="fa-solid fa-school mr-1 text-pink-400"></i> Kelas / Rombel
+          </label>
+          <input type="text" id="input-class" required placeholder="Contoh: X RPL 1" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition">
+        </div>
+
+        <button type="submit" class="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:opacity-90 font-bold text-white text-base shadow-lg shadow-indigo-500/25 transition transform active:scale-95 flex items-center justify-center gap-2">
+          <span>Mulai Bermain</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </form>
+    </section>
+
+    <!-- PAGE 2: DIFFICULTY DASHBOARD -->
+    <section id="page-dashboard" class="hidden w-full max-w-4xl z-10 py-4">
+      
+      <!-- AI Bot Welcome -->
+      <div class="glass-card rounded-2xl p-5 mb-6 flex flex-col sm:flex-row items-center gap-4 border-l-4 border-l-cyan-400">
+        <div class="w-14 h-14 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300 text-3xl flex-shrink-0 relative">
+          <i class="fa-solid fa-robot animate-bounce-slow"></i>
+          <span class="absolute -top-1 -right-1 flex h-3 w-3">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"></span>
+          </span>
+        </div>
+        <div class="flex-grow text-center sm:text-left">
+          <div class="flex items-center justify-center sm:justify-start gap-2 mb-1">
+            <span class="font-bold text-cyan-400 text-sm">AlgoBot AI Assistant</span>
+            <span class="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-semibold">Online</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-200">
+            Halo <span id="welcome-player-name" class="font-bold text-amber-300">Siswa</span>! Dalam game ini kamu akan belajar prinsip **Stack (LIFO: Last In First Out)**. Tugasmu adalah mengelompokkan bola hingga 1 tabung hanya berisi 1 warna yang sama. Pilih tingkat kesulitan di bawah ini!
+          </p>
+        </div>
+      </div>
+
+      <h2 class="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-layer-group text-indigo-400"></i> Pilih Tingkat Kesulitan
+      </h2>
+
+      <!-- Level Selection Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- Easy Level Card -->
+        <div class="glass-card hover:border-emerald-500/50 rounded-3xl p-6 flex flex-col justify-between border-t-4 border-t-emerald-500 transition duration-300">
+          <div>
+            <div class="flex justify-between items-center mb-3">
+              <span class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg font-black">01</span>
+              <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold">Mudah</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Tingkat Pemula</h3>
+            <ul class="text-xs text-slate-300 space-y-1.5 mb-6">
+              <li><i class="fa-solid fa-circle-check text-emerald-400 mr-1.5"></i> 3 Tabung Stack</li>
+              <li><i class="fa-solid fa-circle-check text-emerald-400 mr-1.5"></i> 2 Warna Bola Berbeda</li>
+              <li><i class="fa-solid fa-circle-check text-emerald-400 mr-1.5"></i> Kapasitas Max 3 Bola / Tabung</li>
+            </ul>
+          </div>
+          <button onclick="startLevel('easy')" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-white text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25">
+            <span>Main Level Mudah</span>
+            <i class="fa-solid fa-play"></i>
+          </button>
+        </div>
+
+        <!-- Medium Level Card -->
+        <div class="glass-card hover:border-amber-500/50 rounded-3xl p-6 flex flex-col justify-between border-t-4 border-t-amber-500 transition duration-300">
+          <div>
+            <div class="flex justify-between items-center mb-3">
+              <span class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg font-black">02</span>
+              <span class="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">Sedang</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Tingkat Menengah</h3>
+            <ul class="text-xs text-slate-300 space-y-1.5 mb-6">
+              <li><i class="fa-solid fa-circle-check text-amber-400 mr-1.5"></i> 4 Tabung Stack</li>
+              <li><i class="fa-solid fa-circle-check text-amber-400 mr-1.5"></i> 3 Warna Bola Berbeda</li>
+              <li><i class="fa-solid fa-circle-check text-amber-400 mr-1.5"></i> Kapasitas Max 4 Bola / Tabung</li>
+            </ul>
+          </div>
+          <button onclick="startLevel('medium')" class="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-500 font-bold text-white text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-amber-600/25">
+            <span>Main Level Sedang</span>
+            <i class="fa-solid fa-play"></i>
+          </button>
+        </div>
+
+        <!-- Hard Level Card -->
+        <div class="glass-card hover:border-rose-500/50 rounded-3xl p-6 flex flex-col justify-between border-t-4 border-t-rose-500 transition duration-300">
+          <div>
+            <div class="flex justify-between items-center mb-3">
+              <span class="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-lg font-black">03</span>
+              <span class="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-bold">Sulit</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Tingkat Mahir</h3>
+            <ul class="text-xs text-slate-300 space-y-1.5 mb-6">
+              <li><i class="fa-solid fa-circle-check text-rose-400 mr-1.5"></i> 6 Tabung Stack</li>
+              <li><i class="fa-solid fa-circle-check text-rose-400 mr-1.5"></i> 4 Warna Bola Berbeda</li>
+              <li><i class="fa-solid fa-circle-check text-rose-400 mr-1.5"></i> Kapasitas Max 4 Bola / Tabung</li>
+            </ul>
+          </div>
+          <button onclick="startLevel('hard')" class="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-500 font-bold text-white text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-rose-600/25">
+            <span>Main Level Sulit</span>
+            <i class="fa-solid fa-play"></i>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Footer Action -->
+      <div class="mt-8 flex justify-center">
+        <button onclick="showFinalCertificate()" class="px-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 font-extrabold text-slate-950 shadow-lg shadow-amber-500/20 transition flex items-center gap-2">
+          <i class="fa-solid fa-award text-lg"></i>
+          <span>Lihat Sertifikat Hasil Belajar</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- PAGE 3: GAMEPLAY AREA -->
+    <section id="page-gameplay" class="hidden w-full max-w-5xl z-10 py-2">
+      
+      <!-- Top Gameplay Bar -->
+      <div class="glass-card rounded-2xl p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
+        <button onclick="backToDashboard()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 transition flex items-center gap-2">
+          <i class="fa-solid fa-arrow-left"></i> Menu Utama
+        </button>
+
+        <div class="flex items-center gap-3">
+          <span id="gameplay-level-title" class="font-bold text-indigo-400 text-sm sm:text-base">Level: Mudah</span>
+          <span id="gameplay-difficulty-badge" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Easy</span>
+        </div>
+
+        <!-- Live Stats -->
+        <div class="flex items-center gap-4 text-xs font-bold">
+          <div class="text-cyan-400"><i class="fa-solid fa-clock mr-1"></i> Waktu: <span id="gameplay-timer">00:00</span></div>
+          <div class="text-amber-400"><i class="fa-solid fa-shoe-prints mr-1"></i> Langkah: <span id="gameplay-moves">0</span></div>
+        </div>
+      </div>
+
+      <!-- AI Tutor Assistant Prompt Box -->
+      <div class="glass-card rounded-2xl p-4 mb-6 border-l-4 border-l-indigo-500 flex items-start gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-xl flex-shrink-0 mt-0.5">
+          <i class="fa-solid fa-robot"></i>
+        </div>
+        <div class="flex-grow">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-indigo-400">Petunjuk AlgoBot (Konsep Stack LIFO):</span>
+            <button onclick="getAIHint()" class="text-[11px] bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 px-2.5 py-1 rounded-lg border border-indigo-500/30 transition flex items-center gap-1">
+              <i class="fa-solid fa-lightbulb text-amber-300"></i> Minta Hint
+            </button>
+          </div>
+          <p id="gameplay-ai-hint" class="text-xs sm:text-sm text-slate-200 leading-relaxed mt-1">
+            Klik pada tabung untuk mengambil bola paling atas (**POP**), lalu klik tabung tujuan untuk menumpuknya (**PUSH**).
+          </p>
+        </div>
+      </div>
+
+      <!-- MAIN TUBE STACK BOARD -->
+      <div id="game-board" class="glass-card rounded-3xl p-6 min-h-[380px] flex items-center justify-center flex-wrap gap-6 sm:gap-10 border border-slate-700/50">
+        <!-- Tubes dynamically generated by JS -->
+      </div>
+
+      <!-- Bottom Action Controls -->
+      <div class="mt-4 flex justify-center gap-3">
+        <button onclick="resetCurrentLevel()" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs sm:text-sm transition flex items-center gap-2 border border-slate-700">
+          <i class="fa-solid fa-rotate-right"></i> Reset Tumpukan
+        </button>
+      </div>
+
+    </section>
+
+    <!-- PAGE 4: CERTIFICATE & RESULT MODAL -->
+    <section id="page-certificate" class="hidden w-full max-w-3xl z-20 my-auto">
+      <div class="glass-card rounded-3xl p-6 sm:p-10 border border-amber-500/30 relative overflow-hidden shadow-2xl bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950">
+        <!-- Certificate Stamp Background -->
+        <div class="absolute -right-12 -bottom-12 opacity-10 text-amber-400 text-[220px] pointer-events-none">
+          <i class="fa-solid fa-certificate"></i>
+        </div>
+
+        <div class="text-center mb-6">
+          <span class="px-3.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-extrabold tracking-widest uppercase border border-amber-500/30">
+            Sertifikat Kelulusan
+          </span>
+          <h2 class="text-2xl sm:text-4xl font-black text-white mt-2">AlgoMaster Stack Explorer</h2>
+          <p class="text-xs sm:text-sm text-slate-400">Penguasaan Materi Struktur Data Stack (LIFO)</p>
+        </div>
+
+        <!-- Student Data Certificate -->
+        <div class="bg-slate-900/80 rounded-2xl p-6 border border-slate-800 text-center space-y-2 mb-6">
+          <p class="text-xs text-slate-400 uppercase font-semibold">Sertifikat Resmi Diberikan Kepada:</p>
+          <h3 id="cert-student-name" class="text-2xl sm:text-3xl font-black text-cyan-400">NAMA SISWA</h3>
+          <p id="cert-student-class" class="text-sm font-bold text-slate-300">Kelas: X RPL 1</p>
+          <div class="w-24 h-0.5 bg-gradient-to-r from-transparent via-amber-500 to-transparent mx-auto my-3"></div>
+          <p class="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto">
+            Telah berhasil menyelesaikan simulasi interaktif penyortiran tumpukan bola warna tunggal menggunakan aturan **Stack (LIFO: Push, Pop, & Top Operation)**.
+          </p>
+        </div>
+
+        <!-- Stats Breakdown -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
+          <div class="bg-slate-800/60 rounded-xl p-3 text-center border border-slate-700">
+            <span class="text-[10px] text-slate-400 block font-semibold">TOTAL SKOR</span>
+            <span id="cert-total-score" class="text-2xl font-black text-amber-400">0</span>
+          </div>
+          <div class="bg-slate-800/60 rounded-xl p-3 text-center border border-slate-700">
+            <span class="text-[10px] text-slate-400 block font-semibold">PREDIKAT</span>
+            <span id="cert-rating" class="text-sm sm:text-base font-extrabold text-emerald-400">Master Stack</span>
+          </div>
+          <div class="col-span-2 sm:col-span-1 bg-slate-800/60 rounded-xl p-3 text-center border border-slate-700">
+            <span class="text-[10px] text-slate-400 block font-semibold">BINTANG KELULUSAN</span>
+            <span id="cert-stars" class="text-base font-black text-amber-400">
+              <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+            </span>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap justify-center gap-4 no-print">
+          <button onclick="window.print()" class="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold text-slate-200 text-xs sm:text-sm transition flex items-center gap-2">
+            <i class="fa-solid fa-print"></i> Cetak / Simpan PDF
+          </button>
+          <button onclick="backToDashboard()" class="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-white text-xs sm:text-sm transition flex items-center gap-2 shadow-lg shadow-indigo-600/25">
+            <i class="fa-solid fa-rotate-left"></i> Kembali ke Menu
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="w-full bg-slate-900/60 border-t border-slate-800/80 py-3 text-center text-xs text-slate-500">
+    AlgoMaster Stack &copy; Game Edukasi Interaktif Struktur Data (Ball Sort Stack)
+  </footer>
+
+  <!-- JAVASCRIPT GAME LOGIC -->
+  <script>
+    /* ==========================================
+       GLOBAL STATE & AUDIO SYNTHESIZER
+       ========================================== */
+    const state = {
+      player: { name: "", class: "" },
+      currentLevelKey: 'easy',
+      scores: { easy: 0, medium: 0, hard: 0 },
+      soundMuted: false,
+      audioCtx: null,
+      
+      // Game state
+      tubes: [],          // Array of arrays (each representing a stack tube)
+      maxCapacity: 3,     // Max balls per tube
+      selectedTubeIndex: null,
+      moveCount: 0,
+      timerSeconds: 0,
+      timerInterval: null
+    };
+
+    // Color definitions for balls
+    const ballColors = [
+      { id: 'red', bg: 'bg-rose-500', border: 'border-rose-300', hex: '#EF4444', name: 'Merah' },
+      { id: 'blue', bg: 'bg-cyan-500', border: 'border-cyan-300', hex: '#06B6D4', name: 'Biru' },
+      { id: 'green', bg: 'bg-emerald-500', border: 'border-emerald-300', hex: '#10B981', name: 'Hijau' },
+      { id: 'yellow', bg: 'bg-amber-400', border: 'border-amber-200', hex: '#F59E0B', name: 'Kuning' }
+    ];
+
+    // Level configurations
+    const levelConfigs = {
+      easy: { tubeCount: 3, colorCount: 2, capacity: 3, title: 'Mudah' },
+      medium: { tubeCount: 4, colorCount: 3, capacity: 4, title: 'Sedang' },
+      hard: { tubeCount: 6, colorCount: 4, capacity: 4, title: 'Sulit' }
+    };
+
+    // Synthesizer Audio Effects (Web Audio API)
+    function playSound(type) {
+      if (state.soundMuted) return;
+      try {
+        if (!state.audioCtx) {
+          state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (state.audioCtx.state === 'suspended') {
+          state.audioCtx.resume();
+        }
+
+        const ctx = state.audioCtx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        const now = ctx.currentTime;
+
+        if (type === 'pop') {
+          // Ball Pop sound (High to low frequency)
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(500, now);
+          osc.frequency.exponentialRampToValueAtTime(250, now + 0.1);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+          osc.start(now);
+          osc.stop(now + 0.1);
+        } else if (type === 'push') {
+          // Ball Push sound (Low to high frequency)
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(250, now);
+          osc.frequency.exponentialRampToValueAtTime(600, now + 0.12);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        } else if (type === 'invalid') {
+          // Invalid Move sound (Sawtooth buzz)
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(180, now);
+          osc.frequency.linearRampToValueAtTime(90, now + 0.2);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        } else if (type === 'win') {
+          // Victory Fanfare
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(523.25, now); // C5
+          osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+          osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+          osc.frequency.setValueAtTime(1046.50, now + 0.35); // C6
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.6);
+          osc.start(now);
+          osc.stop(now + 0.6);
+        } else if (type === 'click') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(400, now);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.04);
+          osc.start(now);
+          osc.stop(now + 0.04);
+        }
+      } catch (e) {
+        console.log('Audio error:', e);
+      }
+    }
+
+    function toggleAudio() {
+      state.soundMuted = !state.soundMuted;
+      const icon = document.getElementById('sound-icon');
+      if (state.soundMuted) {
+        icon.className = 'fa-solid fa-volume-xmark text-rose-400';
+      } else {
+        icon.className = 'fa-solid fa-volume-high text-indigo-400';
+        playSound('click');
+      }
+    }
+
+    /* ==========================================
+       LOGIN & NAVIGATION LOGIC
+       ========================================== */
+    function handleLogin(e) {
+      e.preventDefault();
+      playSound('click');
+
+      const nameInput = document.getElementById('input-name').value.trim();
+      const classInput = document.getElementById('input-class').value.trim();
+
+      if (!nameInput || !classInput) return;
+
+      state.player.name = nameInput;
+      state.player.class = classInput;
+
+      document.getElementById('display-player-name').innerText = nameInput;
+      document.getElementById('display-player-class').innerText = classInput;
+      document.getElementById('welcome-player-name').innerText = nameInput;
+      document.getElementById('nav-user-info').classList.remove('hidden');
+
+      showPage('page-dashboard');
+    }
+
+    function showPage(pageId) {
+      ['page-login', 'page-dashboard', 'page-gameplay', 'page-certificate'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      document.getElementById(pageId).classList.remove('hidden');
+      window.scrollTo(0, 0);
+    }
+
+    function backToDashboard() {
+      playSound('click');
+      clearInterval(state.timerInterval);
+      updateTotalNavScore();
+      showPage('page-dashboard');
+    }
+
+    function updateTotalNavScore() {
+      const total = state.scores.easy + state.scores.medium + state.scores.hard;
+      document.getElementById('display-total-score').innerText = total;
+    }
+
+    /* ==========================================
+       STACK BALL SORT GAME ENGINE
+       ========================================== */
+    function startLevel(levelKey) {
+      playSound('click');
+      state.currentLevelKey = levelKey;
+      state.selectedTubeIndex = null;
+      state.moveCount = 0;
+      state.timerSeconds = 0;
+
+      const config = levelConfigs[levelKey];
+      state.maxCapacity = config.capacity;
+
+      // Update Header UI
+      document.getElementById('gameplay-level-title').innerText = `Level: ${config.title}`;
+      const badge = document.getElementById('gameplay-difficulty-badge');
+      if (levelKey === 'easy') {
+        badge.className = "px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        badge.innerText = "Mudah";
+      } else if (levelKey === 'medium') {
+        badge.className = "px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30";
+        badge.innerText = "Sedang";
+      } else {
+        badge.className = "px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30";
+        badge.innerText = "Sulit";
+      }
+
+      document.getElementById('gameplay-moves').innerText = '0';
+      document.getElementById('gameplay-timer').innerText = '00:00';
+      document.getElementById('gameplay-ai-hint').innerHTML = `
+        Klik pada tabung untuk mengambil bola paling atas (**POP**), lalu klik tabung tujuan untuk menumpuknya (**PUSH**).
+      `;
+
+      // Start Timer
+      clearInterval(state.timerInterval);
+      state.timerInterval = setInterval(() => {
+        state.timerSeconds++;
+        const mins = String(Math.floor(state.timerSeconds / 60)).padStart(2, '0');
+        const secs = String(state.timerSeconds % 60).padStart(2, '0');
+        document.getElementById('gameplay-timer').innerText = `${mins}:${secs}`;
+      }, 1000);
+
+      // Generate Solvable Initial Tubes Setup
+      generateSolvableTubes(config);
+
+      showPage('page-gameplay');
+      renderGameBoard();
+    }
+
+    function generateSolvableTubes(config) {
+      // Create pool of balls
+      let pool = [];
+      for (let c = 0; c < config.colorCount; c++) {
+        for (let k = 0; k < config.capacity; k++) {
+          pool.push(ballColors[c].id);
+        }
+      }
+
+      // Shuffle pool
+      pool.sort(() => Math.random() - 0.5);
+
+      // Distribute into tubes (Leave last tube completely empty for stack operations)
+      state.tubes = [];
+      const filledTubesCount = config.tubeCount - 1;
+
+      for (let i = 0; i < filledTubesCount; i++) {
+        const tubeBalls = pool.splice(0, config.capacity);
+        state.tubes.push(tubeBalls);
+      }
+      
+      // Empty tube(s)
+      for (let i = filledTubesCount; i < config.tubeCount; i++) {
+        state.tubes.push([]);
+      }
+    }
+
+    function resetCurrentLevel() {
+      playSound('click');
+      startLevel(state.currentLevelKey);
+    }
+
+    function renderGameBoard() {
+      const board = document.getElementById('game-board');
+      board.innerHTML = '';
+
+      state.tubes.forEach((tube, tubeIdx) => {
+        const isSelected = state.selectedTubeIndex === tubeIdx;
+        const tubeHeightClass = state.maxCapacity === 3 ? 'h-[180px]' : 'h-[230px]';
+
+        // Tube HTML Outer Box
+        const tubeEl = document.createElement('div');
+        tubeEl.className = `tube-container relative flex flex-col justify-end items-center ${tubeHeightClass} w-16 sm:w-20 bg-slate-900/60 border-b-4 border-x-2 border-slate-600 rounded-b-3xl pt-8 pb-2 px-1 cursor-pointer transition ${isSelected ? 'tube-selected border-cyan-400' : 'hover:border-slate-400'}`;
+        tubeEl.onclick = () => handleTubeClick(tubeIdx);
+
+        // Header Indicator for Stack TOP
+        const topIndicator = document.createElement('div');
+        topIndicator.className = 'absolute -top-6 text-[10px] font-black text-slate-400 uppercase tracking-wider';
+        topIndicator.innerText = `Tabung ${tubeIdx + 1}`;
+        tubeEl.appendChild(topIndicator);
+
+        // Render Balls in Tube (Vertical Stack: bottom to top)
+        const ballsWrapper = document.createElement('div');
+        ballsWrapper.className = 'w-full flex flex-col-reverse items-center gap-1.5 justify-start';
+
+        tube.forEach((colorId, ballIdx) => {
+          const colorObj = ballColors.find(c => c.id === colorId);
+          const isTopBall = ballIdx === tube.length - 1;
+          const isLifted = isSelected && isTopBall;
+
+          const ballEl = document.createElement('div');
+          ballEl.className = `ball w-12 h-12 sm:w-14 sm:h-14 rounded-full ${colorObj.bg} border-2 ${colorObj.border} flex items-center justify-center text-white text-xs font-black shadow-lg ${isLifted ? 'ball-selected' : ''}`;
+          
+          // Show TOP tag on lifted or top ball
+          if (isTopBall) {
+            ballEl.innerHTML = `<span class="text-[9px] opacity-80">TOP</span>`;
+          }
+
+          ballsWrapper.appendChild(ballEl);
+        });
+
+        tubeEl.appendChild(ballsWrapper);
+        board.appendChild(tubeEl);
+      });
+    }
+
+    /* ==========================================
+       CORE STACK INTERACTION (PUSH & POP)
+       ========================================== */
+    function handleTubeClick(tubeIdx) {
+      const selectedIdx = state.selectedTubeIndex;
+
+      if (selectedIdx === null) {
+        // --- POP OPERATION ---
+        if (state.tubes[tubeIdx].length === 0) {
+          playSound('invalid');
+          document.getElementById('gameplay-ai-hint').innerHTML = `
+            <span class="text-rose-400 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> Stack Underflow!</span> Tabung ini kosong, tidak ada bola yang bisa di-POP.
+          `;
+          return;
+        }
+
+        state.selectedTubeIndex = tubeIdx;
+        playSound('pop');
+        const topColorId = state.tubes[tubeIdx][state.tubes[tubeIdx].length - 1];
+        const colorObj = ballColors.find(c => c.id === topColorId);
+
+        document.getElementById('gameplay-ai-hint').innerHTML = `
+          <span class="text-cyan-400 font-bold"><i class="fa-solid fa-arrow-up"></i> POP (Ambil Top Stack):</span> Mengambil bola **${colorObj.name}** dari Tabung ${tubeIdx + 1}. Sekarang pilih tabung tujuan untuk **PUSH**.
+        `;
+        renderGameBoard();
+
+      } else if (selectedIdx === tubeIdx) {
+        // Cancel selection (Put back down)
+        state.selectedTubeIndex = null;
+        playSound('click');
+        document.getElementById('gameplay-ai-hint').innerText = "Aksi dibatalkan. Pilih tabung lain untuk mengambil bola.";
+        renderGameBoard();
+
+      } else {
+        // --- PUSH OPERATION ---
+        const sourceStack = state.tubes[selectedIdx];
+        const targetStack = state.tubes[tubeIdx];
+
+        const ballToMove = sourceStack[sourceStack.length - 1];
+
+        // Validation 1: Check capacity (Stack Overflow)
+        if (targetStack.length >= state.maxCapacity) {
+          playSound('invalid');
+          document.getElementById('gameplay-ai-hint').innerHTML = `
+            <span class="text-rose-400 font-bold"><i class="fa-solid fa-circle-xmark"></i> Stack Overflow!</span> Tabung ${tubeIdx + 1} sudah penuh (Maksimal ${state.maxCapacity} bola).
+          `;
+          return;
+        }
+
+        // Validation 2: Color Rule (Stack can only push on empty tube OR same color top)
+        if (targetStack.length > 0) {
+          const targetTopColor = targetStack[targetStack.length - 1];
+          if (targetTopColor !== ballToMove) {
+            playSound('invalid');
+            document.getElementById('gameplay-ai-hint').innerHTML = `
+              <span class="text-rose-400 font-bold"><i class="fa-solid fa-ban"></i> Aturan Warna Stack Violation!</span> Bola hanya bisa di-PUSH ke atas bola berwarna SAMA atau ke tabung KOSONG.
+            `;
+            return;
+          }
+        }
+
+        // Execute Move: POP from source -> PUSH to target
+        sourceStack.pop();
+        targetStack.push(ballToMove);
+
+        state.moveCount++;
+        document.getElementById('gameplay-moves').innerText = state.moveCount;
+        state.selectedTubeIndex = null;
+
+        playSound('push');
+        
+        const colorObj = ballColors.find(c => c.id === ballToMove);
+        document.getElementById('gameplay-ai-hint').innerHTML = `
+          <span class="text-emerald-400 font-bold"><i class="fa-solid fa-check"></i> PUSH Sukses!</span> Bola **${colorObj.name}** ditumpuk di atas Tabung ${tubeIdx + 1}.
+        `;
+
+        renderGameBoard();
+        checkWinCondition();
+      }
+    }
+
+    /* ==========================================
+       AI HINT ASSISTANT
+       ========================================== */
+    function getAIHint() {
+      playSound('click');
+      
+      // Look for any valid move
+      for (let i = 0; i < state.tubes.length; i++) {
+        if (state.tubes[i].length === 0) continue;
+        
+        const topBall = state.tubes[i][state.tubes[i].length - 1];
+
+        for (let j = 0; j < state.tubes.length; j++) {
+          if (i === j) continue;
+          if (state.tubes[j].length >= state.maxCapacity) continue;
+
+          if (state.tubes[j].length === 0 || state.tubes[j][state.tubes[j].length - 1] === topBall) {
+            const colorObj = ballColors.find(c => c.id === topBall);
+            document.getElementById('gameplay-ai-hint').innerHTML = `
+              <span class="text-amber-300 font-bold"><i class="fa-solid fa-lightbulb"></i> Saran AlgoBot AI:</span> Coba **POP** bola ${colorObj.name} dari Tabung ${i + 1} lalu **PUSH** ke Tabung ${j + 1}.
+            `;
+            return;
+          }
+        }
+      }
+
+      document.getElementById('gameplay-ai-hint').innerHTML = `
+        <span class="text-amber-300 font-bold"><i class="fa-solid fa-rotate-left"></i> Rekomendasi:</span> Jalur tumpukan saat ini terkunci. Coba tombol **Reset Tumpukan** untuk mengulang layout.
+      `;
+    }
+
+    /* ==========================================
+       WIN CONDITION & CERTIFICATE
+       ========================================== */
+    function checkWinCondition() {
+      let isSolved = true;
+
+      for (let tube of state.tubes) {
+        // Tube must be either completely empty OR full with same color
+        if (tube.length === 0) continue;
+        if (tube.length < state.maxCapacity) {
+          isSolved = false;
+          break;
+        }
+        
+        const firstColor = tube[0];
+        const allSame = tube.every(color => color === firstColor);
+        if (!allSame) {
+          isSolved = false;
+          break;
+        }
+      }
+
+      if (isSolved) {
+        clearInterval(state.timerInterval);
+        playSound('win');
+
+        // Calculate score
+        const baseScore = state.currentLevelKey === 'easy' ? 200 : state.currentLevelKey === 'medium' ? 350 : 500;
+        const penalty = state.moveCount * 5;
+        const finalLevelScore = Math.max(100, baseScore - penalty);
+
+        state.scores[state.currentLevelKey] = finalLevelScore;
+        updateTotalNavScore();
+
+        setTimeout(() => {
+          document.getElementById('gameplay-ai-hint').innerHTML = `
+            <span class="text-amber-300 font-black text-sm"><i class="fa-solid fa-trophy"></i> LUAR BIASA! KAMU MENANG!</span><br>
+            Semua tumpukan bola berhasil diselesaikan dengan prinsip Stack (LIFO). Skor Level: +${finalLevelScore}!
+          `;
+        }, 300);
+      }
+    }
+
+    function showFinalCertificate() {
+      playSound('win');
+      updateTotalNavScore();
+
+      const totalScore = state.scores.easy + state.scores.medium + state.scores.hard;
+
+      document.getElementById('cert-student-name').innerText = state.player.name.toUpperCase() || "SISWA MASTER";
+      document.getElementById('cert-student-class').innerText = `Kelas: ${state.player.class || "-"}`;
+      document.getElementById('cert-total-score').innerText = totalScore;
+
+      let rating = "Pengembang Stack";
+      let stars = '<i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i>';
+
+      if (totalScore >= 700) {
+        rating = "Grandmaster Stack (LIFO)";
+        stars = '<i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>';
+      } else if (totalScore >= 300) {
+        rating = "Ahli Struktur Data";
+        stars = '<i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i>';
+      }
+
+      document.getElementById('cert-rating').innerText = rating;
+      document.getElementById('cert-stars').innerHTML = stars;
+
+      showPage('page-certificate');
+    }
+
+    // Init on Load
+    window.onload = function() {
+      console.log("AlgoStack Game Engine Ready.");
+    };
+  </script>
+</body>
+</html>
